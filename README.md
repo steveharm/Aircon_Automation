@@ -23,8 +23,21 @@ This Blueprint sets target temperature depending on second temperature sensor an
   For DRY mode it will have a +2 degrees variant as if it is at the setpoint it tends to cool down too quick. If the mode is DRY it sets the fan speed to Medium else the fan is set to Auto and the temperature is calculated and set as required to maintain a constant temp.
   
   eg. if the target setpoint is 24 then the script will bypass any setting of mode, fan and temp if the sensor temperature is between 23.7 and 24.3
-  
-  
+
+#
+### Logs
+As it sucks to not see what’s going on, this blueprint will log:
+
+* info message that it has set an offset.
+* debug message with all the values
+You can set the debuglevel in your configuration.yaml like so:
+```
+logger:
+  default: error
+  logs:
+    blueprints.manor.aircon_automation: debug
+```  
+
 #
   * If anyone has any sugestions to improve the script I'll gladly look at them.
   
