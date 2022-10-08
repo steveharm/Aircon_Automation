@@ -1,0 +1,185 @@
+blueprint:
+  name: AirCon Automation
+  description: "Sets target temperature depending on second temperature sensor
+    and changes HVAC mode between HEAT, COOL, and DRY adjusting the fan speed from medium to auto.
+
+    This blueprint was inspired by nevesenin's version of Sanderma's original blueprint.
+    Author - Steven Harm from The Manor
+    "
+
+  domain: automation
+  input:
+    hvac_override:
+      name: HVAC Override
+      description: The helper toggle that you created to have an override switch. (required)
+      selector:
+        entity:
+          domain: input_boolean
+    temperature_sensor:
+      name: Temperature sensor
+      description: This sensor will be used as the source.
+      selector:
+        entity:
+          domain: sensor
+          device_class: temperature
+    humidity_sensor:
+      name: Humidity sensor
+      description: This sensor will be used as the source.
+      selector:
+        entity:
+          domain: sensor
+          device_class: humidity
+    hvac:
+      name: HVAC
+      description: The HVAC to set target temperature and mode
+      selector:
+        entity:
+          domain: climate
+    target_temperature:
+      name: Target temperature
+      description: Target temperature of the HVAC
+      selector:
+        number:
+          min: 16
+          max: 30
+          step: 1
+          unit_of_measurement: "°C"
+          mode: slider
+      default: 21
+    high_humidity:
+      name: High Humidity Value
+      description: Set the value of the high Humidity. Default is 55%. Note in colder weather it may not work as desired and the HVAC must support DRY mode.
+      selector:
+        number:
+          min: 25
+          max: 65
+          step: 1
+          unit_of_measurement: "%"
+          mode: slider
+      default: 55
+  source_url: https://github.com/steveharm/
+variables:
+  hvac: !input hvac
+  hvac_mode: "{{ states(hvac) }}"
+  hvac_override: !input hvac_override
+  override: "{{ states(hvac_override) }}"
+  high_humidity: !input high_humidity
+  hvac_fan_mode: "{{ state_attr(hvac,'fan_mode') }}"
+  temperature_sensor: !input temperature_sensor
+  humidity_sensor: !input humidity_sensor
+  humidity: "{{ states(humidity_sensor) }}"
+  target_temperature: !input target_temperature
+  actual_temperature: "{{ states(temperature_sensor)|float }}"
+  calculated_adjustment: "{{ (target_temperature |float - actual_temperature |float) }}"
+  calculated_target_temperature: "{{ (target_temperature + calculated_adjustment)|float|round }}"
+  target_temperature1: "{{ (target_temperature |float + 0.3) }}"
+  target_temperature2: "{{ (target_temperature |float - 0.3) }}"
+  target_drymode: "{{ (calculated_target_temperature |float - 3) }}"
+
+trigger:
+  - platform: time_pattern
+    minutes: /10
+condition:
+  - '{{ override != "on" }}'
+  - '{{ hvac_mode != "off" }}'
+  - "{{ calculated_adjustment != 0 }}"
+action:
+  - choose:
+      - conditions:
+          - "{{ (actual_temperature > target_temperature1) }}"
+        sequence:
+          - if:
+              - "{{ humidity > high_humidity }}"
+              - "{{ (actual_temperature > (target_temperature + 2)) }}"
+            then:
+              - service: climate.set_hvac_mode
+                data:
+                  hvac_mode: dry
+                target:
+                  entity_id: "{{ hvac }}"
+              - service: climate.set_temperature
+                data:
+                  temperature: "{{ target_drymode }}"
+                  entity_id: "{{ hvac }}"
+                alias: "Climate: Set HVAC mode Downstairs AC to DRY"
+            else:
+              - service: climate.set_hvac_mode
+                data:
+                  hvac_mode: cool
+                target:
+                  entity_id: "{{ hvac }}"
+              - service: climate.set_temperature
+                data:
+                  temperature: "{{ calculated_target_temperature }}"
+                  entity_id: "{{ hvac }}"
+                alias: "Climate: Set HVAC mode Downstairs AC to COOL"
+            alias: if Humidity is above "{{ high_humidity }}"% set mode to DRY else set to COOL
+      - conditions:
+          - "{{ (actual_temperature < target_temperature2) }}"
+        sequence:
+          - service: climate.set_hvac_mode
+            data:
+              hvac_mode: heat
+            target:
+              entity_id: "{{ hvac }}"
+          - service: climate.set_temperature
+            data:
+              temperature: "{{ calculated_target_temperature }}"
+              entity_id: "{{ hvac }}"
+            alias: "Climate: Set HVAC mode Downstairs AC to HEAT"
+  - if:
+      - "{{ (actual_temperature > target_temperature1) }}"
+      - "{{ (actual_temperature < target_temperature2) }}"
+      # - condition: numeric_state
+      #   entity_id: !input humidity_sensor
+      #   above: 55
+      - "{{ humidity > high_humidity }}"
+      - condition: state
+        entity_id: !input hvac
+        attribute: last_on_operation
+        state: dry
+    then:
+      - service: climate.set_fan_mode
+        data:
+          fan_mode: Medium
+        target:
+          entity_id: "{{ hvac }}"
+        alias: "Climate: Set fan mode Downstairs AC to Medium"
+    else:
+      - if:
+          - "{{ (actual_temperature > target_temperature1) }}"
+          - "{{ (actual_temperature < target_temperature2) }}"
+        then:
+          - service: climate.set_fan_mode
+            data:
+              fan_mode: auto
+            target:
+              entity_id: "{{ hvac }}"
+            alias: "Climate: Set fan mode Downstairs AC to auto"
+  - service: system_log.write
+    data:
+      message: >
+        {{ hvac }} - Temp set at {{ calculated_target_temperature }} mode to {{ hvac_mode }} and fan to {{ hvac_fan_mode }}.
+      level: info
+      logger: blueprints.manor.aircon_automation
+  - service: system_log.write
+    data:
+      message: >
+        hvac: {{ hvac }},
+        hvac_fan_mode: {{ hvac_fan_mode }},
+        hvac_override: {{ hvac_override }},
+        override: {{ override }},
+        temperature_sensor: {{ temperature_sensor }},
+        humidity_sensor: {{ humidity_sensor }},
+        humidity: {{ humidity }},
+        high_humidity: {{ high_humidity }},
+        target_temperature: {{ target_temperature }},
+        actual_temperature: {{ actual_temperature }},
+        calculated_adjustment: {{ calculated_adjustment }},
+        calculated_target_temperature: {{ calculated_target_temperature }},
+        target_temperature1: {{ target_temperature1 }},
+        target_temperature2: {{ target_temperature2 }},
+        target_drymode: {{ target_drymode }}
+      level: debug
+      logger: blueprints.manor.aircon_automation
+mode: single
