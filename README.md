@@ -3,6 +3,9 @@
 [![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fsteveharm%2FAircon_Automation%2Fblob%2Fmain%2Faircon_automation.yaml)
 
 This Blueprint sets target temperature depending on second temperature sensor and changes HVAC mode between HEAT, COOL, and DRY adjusting the fan speed from medium to auto.
+
+![Aircon Automation](https://github.com/steveharm/Aircon_Automation/blob/main/airconautomationblueprint.png?raw=true)
+
 #
 ### Requirements
  - External temperature sensor
