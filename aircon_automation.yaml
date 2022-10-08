@@ -57,7 +57,7 @@ blueprint:
           unit_of_measurement: "%"
           mode: slider
       default: 55
-  source_url: https://github.com/steveharm/
+  source_url: https://github.com/steveharm/Aircon_Automation/blob/main/aircon_automation.yaml
 variables:
   hvac: !input hvac
   hvac_mode: "{{ states(hvac) }}"
@@ -130,9 +130,6 @@ action:
   - if:
       - "{{ (actual_temperature > target_temperature1) }}"
       - "{{ (actual_temperature < target_temperature2) }}"
-      # - condition: numeric_state
-      #   entity_id: !input humidity_sensor
-      #   above: 55
       - "{{ humidity > high_humidity }}"
       - condition: state
         entity_id: !input hvac
