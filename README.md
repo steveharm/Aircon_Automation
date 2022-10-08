@@ -37,9 +37,9 @@ As it sucks to not see what’s going on, this blueprint will log:
 You can set the debuglevel in your configuration.yaml like so:
 ```
 logger:
-  default: error
+  default: info
   logs:
-    blueprints.manor.aircon_automation: debug
+    blueprints.steveharm.aircon_automation: debug
 ```  
 
 #
